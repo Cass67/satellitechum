@@ -1,0 +1,117 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - paragraph [ref=e5]: Satellite Chum
+      - heading "Orbit tracks over Earth with a scrubbed timeline." [level=1] [ref=e6]
+      - paragraph [ref=e7]: This first pass shows a live 3D globe, a small set of propagated satellites, and a time slider so you can inspect where a craft sits over Earth and which country or ocean region is underneath it.
+    - generic [ref=e8]:
+      - generic [ref=e9]:
+        - generic [ref=e10]: Satellite set
+        - strong [ref=e11]: "12"
+      - generic [ref=e12]:
+        - generic [ref=e13]: Timeline
+        - strong [ref=e14]: 24 hours
+      - generic [ref=e15]:
+        - generic [ref=e16]: Source
+        - strong [ref=e17]: CelesTrak visual set
+  - main [ref=e18]:
+    - generic [ref=e20]:
+      - generic [ref=e21]:
+        - paragraph [ref=e22]: Visualization
+        - heading "Orbital Globe" [level=2] [ref=e23]
+      - generic [ref=e24]: Tracking ATLAS CENTAUR 2
+    - complementary [ref=e30]:
+      - generic [ref=e32]:
+        - paragraph [ref=e33]: Controls
+        - heading "Time + Focus" [level=2] [ref=e34]
+      - generic [ref=e35]:
+        - generic [ref=e36]: Focused satellite
+        - combobox "Focused satellite" [ref=e37]:
+          - option "ATLAS CENTAUR 2" [selected]
+          - option "THOR AGENA D R/B"
+          - option "SL-3 R/B"
+          - option "SL-8 R/B"
+          - option "SL-8 R/B"
+          - option "OAO 2"
+          - option "ISIS 1"
+          - option "SERT 2"
+          - option "SL-3 R/B"
+          - option "ASTEX 1"
+          - option "SL-8 R/B"
+          - option "OAO 3 (COPERNICUS)"
+      - generic [ref=e38]:
+        - generic [ref=e39]:
+          - generic [ref=e40]: Selected time
+          - strong [ref=e41]: Sat, 07 Mar 2026 22:16:00 UTC
+        - slider [ref=e42]: "720"
+        - generic [ref=e43]:
+          - generic [ref=e44]: "-12h"
+          - button "Play" [ref=e45]
+          - generic [ref=e46]: +12h
+      - generic [ref=e47]:
+        - article [ref=e48]:
+          - text: Country / region
+          - strong [ref=e49]: Resolving…
+          - text: "--"
+        - article [ref=e50]:
+          - text: Subsatellite point
+          - strong [ref=e51]: 17.00° N, 97.12° E
+          - text: 501 km altitude
+        - article [ref=e52]:
+          - text: Velocity
+          - strong [ref=e53]: 7.80 km/s
+          - text: approx orbital speed
+      - generic [ref=e54]:
+        - generic [ref=e56]:
+          - paragraph [ref=e57]: Pass Trace
+          - heading "Focused Orbit" [level=2] [ref=e58]
+        - paragraph [ref=e59]: The highlighted track samples the focused satellite across the selected 24-hour window.
+        - generic [ref=e60]:
+          - button "ATLAS CENTAUR 2 501 km altitude Focused orbit" [ref=e61] [cursor=pointer]:
+            - strong [ref=e62]: ATLAS CENTAUR 2
+            - generic [ref=e63]: 501 km altitude
+            - generic [ref=e64]: Focused orbit
+          - button "THOR AGENA D R/B 807 km altitude Click to focus" [ref=e65] [cursor=pointer]:
+            - strong [ref=e66]: THOR AGENA D R/B
+            - generic [ref=e67]: 807 km altitude
+            - generic [ref=e68]: Click to focus
+          - button "SL-3 R/B 746 km altitude Click to focus" [ref=e69] [cursor=pointer]:
+            - strong [ref=e70]: SL-3 R/B
+            - generic [ref=e71]: 746 km altitude
+            - generic [ref=e72]: Click to focus
+          - button "SL-8 R/B 738 km altitude Click to focus" [ref=e73] [cursor=pointer]:
+            - strong [ref=e74]: SL-8 R/B
+            - generic [ref=e75]: 738 km altitude
+            - generic [ref=e76]: Click to focus
+          - button "SL-8 R/B 561 km altitude Click to focus" [ref=e77] [cursor=pointer]:
+            - strong [ref=e78]: SL-8 R/B
+            - generic [ref=e79]: 561 km altitude
+            - generic [ref=e80]: Click to focus
+          - button "OAO 2 737 km altitude Click to focus" [ref=e81] [cursor=pointer]:
+            - strong [ref=e82]: OAO 2
+            - generic [ref=e83]: 737 km altitude
+            - generic [ref=e84]: Click to focus
+          - button "ISIS 1 3420 km altitude Click to focus" [ref=e85] [cursor=pointer]:
+            - strong [ref=e86]: ISIS 1
+            - generic [ref=e87]: 3420 km altitude
+            - generic [ref=e88]: Click to focus
+          - button "SERT 2 1048 km altitude Click to focus" [ref=e89] [cursor=pointer]:
+            - strong [ref=e90]: SERT 2
+            - generic [ref=e91]: 1048 km altitude
+            - generic [ref=e92]: Click to focus
+          - button "SL-3 R/B 385 km altitude Click to focus" [ref=e93] [cursor=pointer]:
+            - strong [ref=e94]: SL-3 R/B
+            - generic [ref=e95]: 385 km altitude
+            - generic [ref=e96]: Click to focus
+          - button "ASTEX 1 731 km altitude Click to focus" [ref=e97] [cursor=pointer]:
+            - strong [ref=e98]: ASTEX 1
+            - generic [ref=e99]: 731 km altitude
+            - generic [ref=e100]: Click to focus
+          - button "SL-8 R/B 804 km altitude Click to focus" [ref=e101] [cursor=pointer]:
+            - strong [ref=e102]: SL-8 R/B
+            - generic [ref=e103]: 804 km altitude
+            - generic [ref=e104]: Click to focus
+          - button "OAO 3 (COPERNICUS) 704 km altitude Click to focus" [ref=e105] [cursor=pointer]:
+            - strong [ref=e106]: OAO 3 (COPERNICUS)
+            - generic [ref=e107]: 704 km altitude
+            - generic [ref=e108]: Click to focus

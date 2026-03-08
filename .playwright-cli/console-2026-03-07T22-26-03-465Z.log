@@ -1,0 +1,27 @@
+Total messages: 5 (Errors: 5, Warnings: 0)
+
+[ERROR] Loading the image 'http://cdn.jsdelivr.net/npm/three-globe/example/img/earth-night.jpg' violates the following Content Security Policy directive: "img-src 'self' data: https:". The action has been blocked. @ http://127.0.0.1:8000/:0
+[ERROR] Loading the image 'http://cdn.jsdelivr.net/npm/three-globe/example/img/earth-topology.png' violates the following Content Security Policy directive: "img-src 'self' data: https:". The action has been blocked. @ http://127.0.0.1:8000/:0
+[ERROR] Failed to load resource: the server responded with a status of 404 (NOT FOUND) @ http://127.0.0.1:8000/favicon.ico:0
+ReferenceError: THREE is not defined
+    at satelliteMesh (http://127.0.0.1:8000/static/app.js:43:19)
+    at http://127.0.0.1:8000/static/app.js:75:38
+    at https://cdn.jsdelivr.net/npm/globe.gl@2.44.0/dist/globe.gl.min.js:20:707503
+    at t.<anonymous> (https://cdn.jsdelivr.net/npm/globe.gl@2.44.0/dist/globe.gl.min.js:20:600038)
+    at https://cdn.jsdelivr.net/npm/globe.gl@2.44.0/dist/globe.gl.min.js:5:8472
+    at Array.forEach (<anonymous>)
+    at t.value (https://cdn.jsdelivr.net/npm/globe.gl@2.44.0/dist/globe.gl.min.js:5:8437)
+    at m.update (https://cdn.jsdelivr.net/npm/globe.gl@2.44.0/dist/globe.gl.min.js:20:708086)
+    at https://cdn.jsdelivr.net/npm/globe.gl@2.44.0/dist/globe.gl.min.js:2:525152
+    at d (https://cdn.jsdelivr.net/npm/globe.gl@2.44.0/dist/globe.gl.min.js:2:522382)
+ReferenceError: THREE is not defined
+    at satelliteMesh (http://127.0.0.1:8000/static/app.js:43:19)
+    at http://127.0.0.1:8000/static/app.js:75:38
+    at https://cdn.jsdelivr.net/npm/globe.gl@2.44.0/dist/globe.gl.min.js:20:707503
+    at t.<anonymous> (https://cdn.jsdelivr.net/npm/globe.gl@2.44.0/dist/globe.gl.min.js:20:600038)
+    at https://cdn.jsdelivr.net/npm/globe.gl@2.44.0/dist/globe.gl.min.js:5:8472
+    at Array.forEach (<anonymous>)
+    at t.value (https://cdn.jsdelivr.net/npm/globe.gl@2.44.0/dist/globe.gl.min.js:5:8437)
+    at m.update (https://cdn.jsdelivr.net/npm/globe.gl@2.44.0/dist/globe.gl.min.js:20:708086)
+    at https://cdn.jsdelivr.net/npm/globe.gl@2.44.0/dist/globe.gl.min.js:2:525152
+    at d (https://cdn.jsdelivr.net/npm/globe.gl@2.44.0/dist/globe.gl.min.js:2:522382)

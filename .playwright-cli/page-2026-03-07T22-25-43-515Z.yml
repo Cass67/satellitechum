@@ -1,0 +1,76 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - paragraph [ref=e5]: Satellite Chum
+      - heading "Orbit tracks over Earth with a scrubbed timeline." [level=1] [ref=e6]
+      - paragraph [ref=e7]: This first pass shows a live 3D globe, a small set of propagated satellites, and a time slider so you can inspect where a craft sits over Earth and which country or ocean region is underneath it.
+      - generic [ref=e9]:
+        - textbox "Search" [ref=e10]:
+          - /placeholder: Search a city, country, or place
+        - button "Search" [ref=e11] [cursor=pointer]
+    - generic [ref=e12]:
+      - generic [ref=e13]:
+        - generic [ref=e14]: Satellite set
+        - strong [ref=e15]: "0"
+      - generic [ref=e16]:
+        - generic [ref=e17]: Timeline
+        - strong [ref=e18]: 24 hours
+      - generic [ref=e19]:
+        - generic [ref=e20]: Source
+        - strong [ref=e21]: CelesTrak visual set
+  - main [ref=e22]:
+    - generic [ref=e24]:
+      - generic [ref=e25]:
+        - paragraph [ref=e26]: Visualization
+        - heading "Orbital Globe" [level=2] [ref=e27]
+      - generic [ref=e28]: Loading satellites
+    - complementary [ref=e34]:
+      - generic [ref=e36]:
+        - paragraph [ref=e37]: Controls
+        - heading "Time + Focus" [level=2] [ref=e38]
+      - generic [ref=e39]:
+        - generic [ref=e40]: Focused satellite
+        - combobox "Focused satellite" [ref=e41]
+      - generic [ref=e42]:
+        - generic [ref=e43]:
+          - generic [ref=e44]: Selected time
+          - strong [ref=e45]: "--"
+        - slider [ref=e46]: "720"
+        - generic [ref=e48] [cursor=pointer]:
+          - checkbox "Orbit trace" [ref=e49]
+          - generic [ref=e50]: Orbit trace
+        - generic [ref=e51]:
+          - generic [ref=e52]: "-12h"
+          - button "Play" [ref=e53]
+          - generic [ref=e54]: +12h
+      - generic [ref=e55]:
+        - article [ref=e56]:
+          - text: Country / region
+          - strong [ref=e57]: Resolving…
+          - text: "--"
+        - article [ref=e58]:
+          - text: Subsatellite point
+          - strong [ref=e59]: "--"
+          - text: "--"
+        - article [ref=e60]:
+          - text: Velocity
+          - strong [ref=e61]: "--"
+          - text: approx orbital speed
+        - article [ref=e62]:
+          - text: Selected satellite
+          - strong [ref=e63]: "--"
+          - text: Click a satellite or pick one below
+      - generic [ref=e64]:
+        - generic [ref=e66]:
+          - paragraph [ref=e67]: Pass Trace
+          - heading "Focused Orbit" [level=2] [ref=e68]
+        - paragraph [ref=e69]: The highlighted track samples the focused satellite across the selected 24-hour window.
+      - generic [ref=e70]:
+        - generic [ref=e72]:
+          - paragraph [ref=e73]: Overhead
+          - heading "Search Location" [level=2] [ref=e74]
+        - paragraph [ref=e75]: Search a location to see which tracked satellites are closest overhead at the selected time.
+        - generic [ref=e76]:
+          - text: Selected place
+          - strong [ref=e77]: None selected
+          - text: Use the search box above

@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Satellite Chum</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2306111d'/%3E%3Ccircle cx='32' cy='32' r='15' fill='%230ea5e9'/%3E%3Cpath d='M10 34c11-8 33-8 44 0' stroke='%23fbbf24' stroke-width='4' stroke-linecap='round' fill='none'/%3E%3Ccircle cx='49' cy='34' r='4' fill='%23f8fafc'/%3E%3C/svg%3E">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app-shell">
+        <section class="hero">
+            <div class="hero-copy">
+                <p class="eyebrow">Satellite Chum</p>
+                <h1>Live satellite tracking over Earth.</h1>
+                <p class="lede">
+                    Search a place, inspect overhead satellites, and scrub time against a live globe.
+                </p>
+                <div class="search-wrap">
+                    <label class="search-field" for="locationSearch">
+                        <input id="locationSearch" type="text" placeholder="Search a city, country, or place">
+                        <button id="searchButton" type="button">Search</button>
+                    </label>
+                    <div id="searchResults" class="search-results hidden"></div>
+                </div>
+            </div>
+            <div class="hero-stats">
+                <div class="stat">
+                    <span class="stat-label">Satellite set</span>
+                    <strong id="satelliteCount">0</strong>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Timeline</span>
+                    <strong>24 hours</strong>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Source</span>
+                    <strong>CelesTrak visual set</strong>
+                </div>
+            </div>
+        </section>
+
+        <main class="workspace">
+            <div class="visual-column">
+                <section class="panel globe-panel">
+                    <div class="panel-header">
+                        <div>
+                            <p class="panel-kicker">Visualization</p>
+                            <h2>Orbital Globe</h2>
+                        </div>
+                        <div class="panel-actions">
+                            <div class="status-pill">Live Intel</div>
+                            <button type="button" class="overlay-toggle" id="overlayToggle">Perspective</button>
+                            <div class="status-pill" id="timelineStatus">Loading satellites</div>
+                        </div>
+                    </div>
+                    <div class="globe-stage">
+                        <div id="globeViz" class="globe"></div>
+                    </div>
+                </section>
+
+                <section class="panel orbital-overlay hidden" id="orbitalOverlay">
+                    <div class="panel-header compact">
+                        <div>
+                            <p class="panel-kicker">Perspective</p>
+                            <h2>Orbital Perspective</h2>
+                        </div>
+                        <small class="panel-meta" id="overlayMeta">Select a place to see satellites above Earth</small>
+                    </div>
+                    <canvas id="skyPlotOverlay" width="960" height="540" aria-label="Orbital perspective overlay"></canvas>
+                </section>
+
+                <section class="panel overhead-panel">
+                    <div class="panel-header compact">
+                        <div>
+                            <p class="panel-kicker">Overhead</p>
+                            <h2>Above The Selected Place</h2>
+                        </div>
+                        <small class="panel-meta" id="overheadCount">0 visible now</small>
+                    </div>
+                    <p class="pass-copy" id="searchSummary">
+                        Search a location to see which tracked satellites are closest overhead at the selected time.
+                    </p>
+                    <div class="detail-card accent-gold location-card">
+                        <span class="detail-label">Selected place</span>
+                        <strong id="selectedLocationName">None selected</strong>
+                        <small id="selectedLocationMeta">Use the search box above</small>
+                    </div>
+                    <div id="overheadList" class="satellite-list overhead-list"></div>
+                </section>
+            </div>
+
+            <aside class="panel control-panel">
+                <div class="panel-header">
+                    <div>
+                        <p class="panel-kicker">Controls</p>
+                        <h2>Time + Focus</h2>
+                    </div>
+                </div>
+
+                <label class="field">
+                    <span>Focused satellite</span>
+                    <select id="satelliteSelect"></select>
+                </label>
+
+                <div class="timeline-card">
+                    <div class="timeline-copy">
+                        <span>Selected time</span>
+                        <strong id="timeLabel">--</strong>
+                    </div>
+                    <input id="timeSlider" type="range" min="0" max="1440" step="5" value="720">
+                    <div class="toggle-row">
+                        <label class="toggle-pill" for="orbitTraceToggle">
+                            <input id="orbitTraceToggle" type="checkbox">
+                            <span>Orbit trace</span>
+                        </label>
+                    </div>
+                    <div class="timeline-scale">
+                        <span>-12h</span>
+                        <button id="playPauseButton" type="button">Play</button>
+                        <span>+12h</span>
+                    </div>
+                </div>
+
+                <div class="details-grid">
+                    <article class="detail-card accent-blue">
+                        <span class="detail-label">Country / region</span>
+                        <strong id="countryName">Resolving…</strong>
+                        <small id="countryCode">--</small>
+                    </article>
+                    <article class="detail-card accent-gold">
+                        <span class="detail-label">Subsatellite point</span>
+                        <strong id="positionLabel">--</strong>
+                        <small id="altitudeLabel">--</small>
+                    </article>
+                    <article class="detail-card accent-green">
+                        <span class="detail-label">Velocity</span>
+                        <strong id="velocityLabel">--</strong>
+                        <small>approx orbital speed</small>
+                    </article>
+                    <article class="detail-card accent-blue">
+                        <span class="detail-label">Selected satellite</span>
+                        <strong id="satelliteNameLabel">--</strong>
+                        <small id="satelliteMetaLabel">Click a satellite or pick one below</small>
+                    </article>
+                    <article class="detail-card accent-green satellite-info-card">
+                        <span class="detail-label">Mission / purpose</span>
+                        <strong id="satellitePurposeLabel">Loading…</strong>
+                        <small id="satellitePurposeMeta">Catalog metadata will appear here</small>
+                        <div id="satelliteFactGrid" class="satellite-fact-grid"></div>
+                    </article>
+                </div>
+
+                <section class="pass-panel">
+                    <div class="panel-header compact">
+                        <div>
+                            <p class="panel-kicker">Pass Trace</p>
+                            <h2>Focused Orbit</h2>
+                        </div>
+                        <small class="panel-meta" id="orbitCount">0 tracked objects</small>
+                    </div>
+                    <p class="pass-copy" id="orbitSummary">
+                        The highlighted track samples the focused satellite across the selected 24-hour window, while the list below is the full tracked set.
+                    </p>
+                    <div id="satelliteList" class="satellite-list orbit-list"></div>
+                </section>
+            </aside>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/three@0.181.1/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/globe.gl@2.44.0/dist/globe.gl.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/satellite.js@6.0.1/dist/satellite.min.js"></script>
+    <script src="/static/app.js"></script>
+</body>
+</html>
