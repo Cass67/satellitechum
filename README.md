@@ -120,4 +120,4 @@ node --check static/app.js
 
 ## Live site
 
-App can be seen live at [http](https://satchum.hehaw.net/)
+App can be seen live at [https://satchum.hehaw.net)
