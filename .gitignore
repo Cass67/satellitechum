@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.env
+.venv/
+node_modules/
+output/
+.playwright-cli/
+.claude/
+security_best_practices_report.md
+deploy/inventory.ini

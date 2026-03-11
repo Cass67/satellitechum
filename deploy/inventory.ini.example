@@ -1,0 +1,2 @@
+[yourhost]
+yourhost ansible_host=your-server-ip-or-hostname ansible_user=yourusername

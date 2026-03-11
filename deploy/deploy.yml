@@ -1,0 +1,76 @@
+---
+- name: Deploy satellite-chum
+  hosts: rocky
+  become: false
+  vars:
+    app_dir: /home/cass/satellite-chum
+    archive: /tmp/satellite-chum-deploy.tar.gz
+    trusted_hosts: "{{ inventory_hostname }}"
+
+  tasks:
+    - name: Ensure app directory exists
+      ansible.builtin.file:
+        path: "{{ app_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Check .env exists
+      ansible.builtin.stat:
+        path: "{{ app_dir }}/.env"
+      register: env_file
+
+    - name: Generate SECRET_KEY for new .env
+      ansible.builtin.command:
+        cmd: python3 -c "import secrets; print(secrets.token_hex(32))"
+      register: generated_secret
+      changed_when: false
+      when: not env_file.stat.exists
+
+    - name: Bootstrap .env on first deploy
+      ansible.builtin.copy:
+        dest: "{{ app_dir }}/.env"
+        mode: "0600"
+        content: |
+          SATELLITECHUM_ENV=production
+          SECRET_KEY={{ generated_secret.stdout }}
+          SESSION_COOKIE_SECURE=true
+          TRUSTED_HOSTS={{ trusted_hosts }}
+          TUNNEL_TOKEN=
+      when: not env_file.stat.exists
+
+    - name: Create deployment archive
+      ansible.builtin.shell:
+        cmd: >
+          tar -czf {{ archive }}
+          --exclude='.git'
+          --exclude='__pycache__'
+          --exclude='*.pyc'
+          --exclude='.env'
+          --exclude='node_modules'
+          --exclude='.playwright-cli'
+          --exclude='output'
+          --exclude='tests'
+          --exclude='*.md'
+          -C {{ playbook_dir }}/../ .
+      delegate_to: localhost
+      changed_when: false
+
+    - name: Upload and extract archive
+      ansible.builtin.unarchive:
+        src: "{{ archive }}"
+        dest: "{{ app_dir }}"
+        remote_src: false
+      notify: Restart stack
+
+    - name: Remove local archive
+      ansible.builtin.file:
+        path: "{{ archive }}"
+        state: absent
+      delegate_to: localhost
+      changed_when: false
+
+  handlers:
+    - name: Restart stack
+      ansible.builtin.shell:
+        cmd: podman compose build --no-cache && podman compose up -d --force-recreate
+        chdir: "{{ app_dir }}"

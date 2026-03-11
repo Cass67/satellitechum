@@ -1,0 +1,10 @@
+.git
+__pycache__
+*.pyc
+.env
+.playwright-cli
+node_modules
+output
+tests
+HANDOVER.md
+.claude

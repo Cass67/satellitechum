@@ -1,0 +1,15 @@
+[Unit]
+Description=Satellite Chum
+After=network.target
+
+[Service]
+Type=simple
+User=satellitechum
+WorkingDirectory=/opt/satellite-chum
+EnvironmentFile=/opt/satellite-chum/.env
+ExecStart=/opt/satellite-chum/.venv/bin/gunicorn -c gunicorn.conf.py app:app
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

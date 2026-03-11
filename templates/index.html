@@ -5,9 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Satellite Chum</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2306111d'/%3E%3Ccircle cx='32' cy='32' r='15' fill='%230ea5e9'/%3E%3Cpath d='M10 34c11-8 33-8 44 0' stroke='%23fbbf24' stroke-width='4' stroke-linecap='round' fill='none'/%3E%3Ccircle cx='49' cy='34' r='4' fill='%23f8fafc'/%3E%3C/svg%3E">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -22,12 +19,26 @@
                 <div class="search-wrap">
                     <label class="search-field" for="locationSearch">
                         <input id="locationSearch" type="text" placeholder="Search a city, country, or place">
-                        <button id="searchButton" type="button">Search</button>
+                        <button id="searchButton" type="button" class="loading-button">
+                            <span class="loading-dot hidden" id="searchLoadingDot" aria-hidden="true"></span>
+                            <span id="searchButtonLabel">Search</span>
+                        </button>
+                    </label>
+                    <label class="search-field secondary-search" for="noradSearch">
+                        <input id="noradSearch" type="text" inputmode="numeric" placeholder="Jump to a NORAD CAT ID">
+                        <button id="noradSearchButton" type="button" class="loading-button">
+                            <span class="loading-dot hidden" id="noradSearchLoadingDot" aria-hidden="true"></span>
+                            <span id="noradSearchButtonLabel">NORAD</span>
+                        </button>
                     </label>
                     <div id="searchResults" class="search-results hidden"></div>
                 </div>
             </div>
             <div class="hero-stats">
+                <div class="hero-stats__intro">
+                    <p class="panel-kicker">Quick Status</p>
+                    <p class="hero-stats__copy">Live state from the current globe session, including your focused object, selected place, and active feed path.</p>
+                </div>
                 <div class="stat">
                     <span class="stat-label">Satellite set</span>
                     <strong id="satelliteCount">0</strong>
@@ -38,7 +49,25 @@
                 </div>
                 <div class="stat">
                     <span class="stat-label">Source</span>
-                    <strong>CelesTrak visual set</strong>
+                    <strong id="satelliteSourceLabel">Loading satellite source</strong>
+                </div>
+                <div class="hero-quick-grid">
+                    <article class="hero-quick-card">
+                        <span class="stat-label">Focused now</span>
+                        <strong id="heroFocusedSatellite">Waiting for satellites</strong>
+                        <small id="heroFocusedMeta">The highlighted object on the globe appears here.</small>
+                    </article>
+                    <article class="hero-quick-card">
+                        <span class="stat-label">Selected place</span>
+                        <strong id="heroSelectedPlace">No place selected</strong>
+                        <small id="heroSelectedMeta">Search a place or click the globe.</small>
+                    </article>
+                </div>
+                <div class="hero-source-groups">
+                    <span class="stat-label">Active feed groups</span>
+                    <div class="hero-source-chips" id="heroSourceGroups">
+                        <span class="hero-source-chip">Loading</span>
+                    </div>
                 </div>
             </div>
         </section>
@@ -53,11 +82,27 @@
                         </div>
                         <div class="panel-actions">
                             <div class="status-pill">Live Intel</div>
+                            <div class="view-modes" id="themeToggle" aria-label="Theme">
+                                <button type="button" class="mode-btn active" id="themeNightButton" data-theme="night">Night</button>
+                                <button type="button" class="mode-btn" id="themeDayButton" data-theme="day">Day</button>
+                            </div>
                             <button type="button" class="overlay-toggle" id="overlayToggle">Perspective</button>
-                            <div class="status-pill" id="timelineStatus">Loading satellites</div>
+                            <div class="status-pill loading-meta" id="timelineStatusWrap">
+                                <span class="loading-dot hidden" id="timelineLoadingDot" aria-hidden="true"></span>
+                                <span id="timelineStatus">Loading satellites</span>
+                            </div>
                         </div>
                     </div>
                     <div class="globe-stage">
+                        <div class="globe-loading" id="globeLoading">
+                            <div class="globe-loading__content">
+                                <div class="globe-loading__headline">
+                                    <span class="loading-dot" aria-hidden="true"></span>
+                                    <strong id="globeLoadingText">Loading satellites onto the globe…</strong>
+                                </div>
+                                <span class="globe-loading__meta" id="globeLoadingMeta">Waiting for the live catalog…</span>
+                            </div>
+                        </div>
                         <div id="globeViz" class="globe"></div>
                     </div>
                 </section>
@@ -68,28 +113,103 @@
                             <p class="panel-kicker">Perspective</p>
                             <h2>Orbital Perspective</h2>
                         </div>
-                        <small class="panel-meta" id="overlayMeta">Select a place to see satellites above Earth</small>
+                        <label class="field compact-field">
+                            <span>In view labels</span>
+                            <select id="perspectiveLabelLimit">
+                                <option value="5" selected>5</option>
+                                <option value="8">8</option>
+                                <option value="12">12</option>
+                                <option value="20">20</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                                <option value="all">All visible</option>
+                            </select>
+                        </label>
+                        <div class="perspective-status">
+                            <span class="perspective-badge" id="overlayModeBadge">Awaiting Target</span>
+                            <small class="panel-meta" id="overlayMeta">Select a place to see satellites above Earth</small>
+                        </div>
                     </div>
+                    <p class="perspective-note" id="overlayModeSummary">Perspective locks to a selected place or a focused satellite ground track.</p>
                     <canvas id="skyPlotOverlay" width="960" height="540" aria-label="Orbital perspective overlay"></canvas>
                 </section>
 
                 <section class="panel overhead-panel">
                     <div class="panel-header compact">
                         <div>
-                            <p class="panel-kicker">Overhead</p>
-                            <h2>Above The Selected Place</h2>
+                            <p class="panel-kicker">Place Geometry</p>
+                            <h2>Visible From The Place</h2>
                         </div>
-                        <small class="panel-meta" id="overheadCount">0 visible now</small>
+                        <small class="panel-meta" id="overheadCount">0 above horizon now</small>
                     </div>
                     <p class="pass-copy" id="searchSummary">
-                        Search a location to see which tracked satellites are closest overhead at the selected time.
+                        Search a location to see which tracked satellites are above its horizon. That does not by itself mean they are imaging or serving the place.
                     </p>
                     <div class="detail-card accent-gold location-card">
                         <span class="detail-label">Selected place</span>
                         <strong id="selectedLocationName">None selected</strong>
                         <small id="selectedLocationMeta">Use the search box above</small>
                     </div>
+                    <div class="panel-header compact overhead-summary-header">
+                        <div>
+                            <p class="panel-kicker">Selected Satellite</p>
+                            <h3 class="subpanel-title">Orbit Summary</h3>
+                        </div>
+                        <small class="panel-meta" id="orbitCount">No satellite selected</small>
+                    </div>
+                    <p class="pass-copy overhead-summary-copy" id="orbitSummary">
+                        The selected satellite summary lives here. The place-based overhead list is the single source of truth for what matches the orbital perspective.
+                    </p>
+                    <div class="orbit-focus-grid">
+                        <article class="orbit-focus-card">
+                            <span class="detail-label">Focus</span>
+                            <strong id="orbitFocusTitle">Awaiting selection</strong>
+                            <small id="orbitFocusMeta">Choose or click a satellite to inspect its orbit.</small>
+                        </article>
+                        <article class="orbit-focus-card">
+                            <span class="detail-label">Track Context</span>
+                            <strong id="orbitFocusWindow">24 hour scrub</strong>
+                            <small id="orbitFocusWindowMeta">The globe and trace are synced to the selected time window.</small>
+                        </article>
+                        <article class="orbit-focus-card">
+                            <span class="detail-label">Relative To Place</span>
+                            <strong id="orbitFocusRelationship">No place selected</strong>
+                            <small id="orbitFocusRelationshipMeta">Search a place to compare this satellite to the overhead view.</small>
+                        </article>
+                        <article class="orbit-focus-card">
+                            <span class="detail-label">Current State</span>
+                            <strong id="orbitFocusAltitude">--</strong>
+                            <small id="orbitFocusVelocity">--</small>
+                        </article>
+                    </div>
                     <div id="overheadList" class="satellite-list overhead-list"></div>
+                </section>
+
+                <section class="panel intel-panel">
+                    <div class="panel-header compact">
+                        <div>
+                            <p class="panel-kicker">Location Intel</p>
+                            <h2>Selected Place Brief</h2>
+                        </div>
+                        <small class="panel-meta loading-meta" id="intelStatusWrap">
+                            <span class="loading-dot hidden" id="intelLoadingDot" aria-hidden="true"></span>
+                            <span id="intelStatus">Select a place</span>
+                        </small>
+                    </div>
+                    <div class="intel-hero">
+                        <img id="intelImage" class="intel-image hidden" alt="Location reference image">
+                        <div class="intel-copy">
+                            <strong id="intelTitle">No place selected</strong>
+                            <small id="intelSubtitle">Search or click a place on the globe to load context.</small>
+                            <p id="intelSummary" class="pass-copy">Population, country profile, and nearby landmarks will appear here.</p>
+                            <a id="intelLink" class="intel-link hidden" target="_blank" rel="noreferrer">Read more</a>
+                        </div>
+                    </div>
+                    <div id="intelFacts" class="intel-facts"></div>
+                    <div class="intel-landmarks-wrap">
+                        <span class="detail-label">Nearby landmarks</span>
+                        <div id="intelLandmarks" class="intel-landmarks"></div>
+                    </div>
                 </section>
             </div>
 
@@ -102,6 +222,33 @@
                 </div>
 
                 <label class="field">
+                    <span>Service type</span>
+                    <select id="serviceFilter">
+                        <option value="all">All services</option>
+                        <option value="comms">Comms / broadcast / internet</option>
+                        <option value="navigation">Navigation</option>
+                        <option value="military">Military / surveillance</option>
+                        <option value="earth-observation">Earth observation</option>
+                        <option value="weather">Weather</option>
+                        <option value="science">Science / research</option>
+                        <option value="human-spaceflight">Human spaceflight</option>
+                        <option value="debris">Debris / launch hardware</option>
+                        <option value="other">Other</option>
+                    </select>
+                </label>
+
+                <label class="field">
+                    <span>Satellites in view</span>
+                    <select id="satelliteLimit">
+                        <option value="100" selected>100</option>
+                        <option value="250">250</option>
+                        <option value="500">500</option>
+                        <option value="1000">1000</option>
+                        <option value="all">All loaded</option>
+                    </select>
+                </label>
+
+                <label class="field">
                     <span>Focused satellite</span>
                     <select id="satelliteSelect"></select>
                 </label>
@@ -111,7 +258,7 @@
                         <span>Selected time</span>
                         <strong id="timeLabel">--</strong>
                     </div>
-                    <input id="timeSlider" type="range" min="0" max="1440" step="5" value="720">
+                    <input id="timeSlider" type="range" min="0" max="1440" step="1" value="720">
                     <div class="toggle-row">
                         <label class="toggle-pill" for="orbitTraceToggle">
                             <input id="orbitTraceToggle" type="checkbox">
@@ -128,7 +275,10 @@
                 <div class="details-grid">
                     <article class="detail-card accent-blue">
                         <span class="detail-label">Country / region</span>
-                        <strong id="countryName">Resolving…</strong>
+                        <strong class="loading-meta">
+                            <span class="loading-dot hidden" id="countryLoadingDot" aria-hidden="true"></span>
+                            <span id="countryName">Resolving…</span>
+                        </strong>
                         <small id="countryCode">--</small>
                     </article>
                     <article class="detail-card accent-gold">
@@ -149,31 +299,22 @@
                     <article class="detail-card accent-green satellite-info-card">
                         <span class="detail-label">Mission / purpose</span>
                         <strong id="satellitePurposeLabel">Loading…</strong>
-                        <small id="satellitePurposeMeta">Catalog metadata will appear here</small>
+                        <small class="loading-meta" id="satellitePurposeMetaWrap">
+                            <span class="loading-dot hidden" id="satelliteLoadingDot" aria-hidden="true"></span>
+                            <span id="satellitePurposeMeta">Catalog metadata will appear here</span>
+                        </small>
+                        <p id="satelliteSummary" class="satellite-summary">Select a satellite to load richer mission context.</p>
+                        <a id="satelliteLink" class="intel-link hidden" href="#" target="_blank" rel="noreferrer">Open reference</a>
                         <div id="satelliteFactGrid" class="satellite-fact-grid"></div>
                     </article>
                 </div>
-
-                <section class="pass-panel">
-                    <div class="panel-header compact">
-                        <div>
-                            <p class="panel-kicker">Pass Trace</p>
-                            <h2>Focused Orbit</h2>
-                        </div>
-                        <small class="panel-meta" id="orbitCount">0 tracked objects</small>
-                    </div>
-                    <p class="pass-copy" id="orbitSummary">
-                        The highlighted track samples the focused satellite across the selected 24-hour window, while the list below is the full tracked set.
-                    </p>
-                    <div id="satelliteList" class="satellite-list orbit-list"></div>
-                </section>
             </aside>
         </main>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/three@0.181.1/build/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/globe.gl@2.44.0/dist/globe.gl.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/satellite.js@6.0.1/dist/satellite.min.js"></script>
+    <script src="/static/vendor/three.global.js"></script>
+    <script src="/static/vendor/globe.gl.min.js"></script>
+    <script src="/static/vendor/satellite.min.js"></script>
     <script src="/static/app.js"></script>
 </body>
 </html>
