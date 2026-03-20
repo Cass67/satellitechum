@@ -1,14 +1,5 @@
-__pycache__/
-*.pyc
+# Keep ripgrep aligned with the default secret-exclusion policy.
 .env
-.venv/
-node_modules/
-output/
-.playwright-cli/
-.claude/
-security_best_practices_report.md
-deploy/inventory.ini
-# Secret-bearing files and directories: never commit these by default.
 .env.*
 *.env
 *env*

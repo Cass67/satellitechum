@@ -1,14 +1,5 @@
-__pycache__/
-*.pyc
+# Secret-bearing files and directories: exclude from default search/read flows.
 .env
-.venv/
-node_modules/
-output/
-.playwright-cli/
-.claude/
-security_best_practices_report.md
-deploy/inventory.ini
-# Secret-bearing files and directories: never commit these by default.
 .env.*
 *.env
 *env*
