@@ -1,10 +1,11 @@
-FROM python:3.14-slim
+FROM oraclelinux:10-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     SATELLITECHUM_ENV=production
 
-RUN useradd --system --no-create-home --shell /usr/sbin/nologin satellitechum
+RUN microdnf install -y python3.12 python3.12-pip && microdnf clean all && \
+    useradd --system --no-create-home --shell /usr/sbin/nologin satellitechum
 
 WORKDIR /app
 
