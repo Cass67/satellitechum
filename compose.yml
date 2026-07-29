@@ -2,7 +2,9 @@ services:
   redis:
     image: docker.io/library/redis:7-alpine
     restart: unless-stopped
+    entrypoint: [""]
     command: redis-server --save "" --appendonly no
+    user: root
     networks:
       - skynet
     cap_drop:
