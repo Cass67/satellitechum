@@ -36,6 +36,9 @@
           SESSION_COOKIE_SECURE=true
           TRUSTED_HOSTS={{ trusted_hosts }}
           TUNNEL_TOKEN=
+          # Cloudflare Turnstile keys — add your real keys here
+          TURNSTILE_SITE_KEY=
+          TURNSTILE_SECRET_KEY=
       when: not env_file.stat.exists
 
     - name: Create deployment archive
@@ -74,3 +77,18 @@
       ansible.builtin.shell:
         cmd: podman compose build --no-cache && podman compose up -d --force-recreate
         chdir: "{{ app_dir }}"
+
+  post_tasks:
+    - name: Install satellite-chum-stack user systemd service
+      ansible.builtin.copy:
+        src: satellite-chum-stack.service
+        dest: "{{ app_dir }}/../.config/systemd/user/satellite-chum-stack.service"
+        mode: "0644"
+
+    - name: Reload user systemd
+      ansible.builtin.shell: systemctl --user daemon-reload
+      changed_when: true
+
+    - name: Enable and start satellite-chum-stack user service
+      ansible.builtin.shell: systemctl --user enable --now satellite-chum-stack
+      changed_when: true
