@@ -312,9 +312,22 @@
         </main>
     </div>
 
-    <script src="/static/vendor/three.global.js"></script>
-    <script src="/static/vendor/globe.gl.min.js"></script>
-    <script src="/static/vendor/satellite.min.js"></script>
-    <script src="/static/app.js"></script>
+    {% if turnstile_site_key %}
+    <div class="cf-turnstile"
+         data-sitekey="{{ turnstile_site_key }}"
+         data-size="invisible"
+         data-callback="turnstileSuccessCallback"
+         data-error-callback="turnstileErrorCallback"
+         data-timeout-callback="turnstileErrorCallback"
+         data-expired-callback="turnstileExpiredCallback"></div>
+    {% endif %}
+
+    <script src="/static/vendor/three.global.js" data-cfasync="false"></script>
+    <script src="/static/vendor/globe.gl.min.js" data-cfasync="false"></script>
+    <script src="/static/vendor/satellite.min.js" data-cfasync="false"></script>
+    <script src="/static/app.js?v=2" data-cfasync="false"></script>
+    {% if turnstile_site_key %}
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" defer data-cfasync="false"></script>
+    {% endif %}
 </body>
 </html>

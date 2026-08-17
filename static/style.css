@@ -335,6 +335,17 @@ body[data-theme="day"] .lede {
     border-top: 1px solid rgba(148, 167, 188, 0.15);
 }
 
+.turnstile-wrap {
+    display: grid;
+    gap: 10px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(148, 167, 188, 0.15);
+}
+
+.turnstile-wrap .cf-turnstile {
+    min-height: 65px;
+}
+
 .hero-source-chips {
     display: flex;
     flex-wrap: wrap;

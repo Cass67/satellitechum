@@ -40,6 +40,45 @@ const state = {
     perspectiveTarget: null,
     perspectiveLabelAbort: null,
     perspectiveLabelKey: "",
+    turnstileToken: window._turnstileToken || "",
+    turnstileSessionReady: false,
+    turnstileSessionPromise: null,
+    turnstileTokenResolve: null,
+    turnstileTokenReject: null,
+    turnstileTokenTimeout: null,
+};
+
+function clearTurnstileTokenWaiter() {
+    if (state.turnstileTokenTimeout) {
+        clearTimeout(state.turnstileTokenTimeout);
+    }
+    state.turnstileTokenResolve = null;
+    state.turnstileTokenReject = null;
+    state.turnstileTokenTimeout = null;
+}
+
+function rejectTurnstileToken(message) {
+    if (state.turnstileTokenReject) {
+        state.turnstileTokenReject(new Error(message));
+    }
+    clearTurnstileTokenWaiter();
+}
+
+window.turnstileSuccessCallback = function (token) {
+    state.turnstileToken = token;
+    window._turnstileToken = token;
+    if (state.turnstileTokenResolve) {
+        state.turnstileTokenResolve(token);
+        clearTurnstileTokenWaiter();
+    }
+};
+
+window.turnstileErrorCallback = function () {
+    rejectTurnstileToken("Turnstile verification failed.");
+};
+
+window.turnstileExpiredCallback = function () {
+    rejectTurnstileToken("Turnstile verification expired.");
 };
 
 const elements = {
@@ -450,8 +489,103 @@ function updateHeroQuickStatus() {
     }
 }
 
+function turnstileWidget() {
+    return document.querySelector(".cf-turnstile");
+}
+
+async function waitForTurnstile() {
+    if (!turnstileWidget()) {
+        return false;
+    }
+    for (let i = 0; i < 100; i += 1) {
+        if (window.turnstile?.execute) {
+            return true;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    return false;
+}
+
+async function requestTurnstileToken() {
+    if (state.turnstileToken) {
+        return state.turnstileToken;
+    }
+    const widget = turnstileWidget();
+    if (!widget) {
+        return "";
+    }
+    const ready = await waitForTurnstile();
+    if (!ready) {
+        throw new Error("Turnstile verification unavailable.");
+    }
+    return new Promise((resolve, reject) => {
+        state.turnstileTokenResolve = resolve;
+        state.turnstileTokenReject = reject;
+        state.turnstileTokenTimeout = setTimeout(() => {
+            rejectTurnstileToken("Turnstile verification timed out.");
+        }, 30000);
+        try {
+            window.turnstile.execute(widget);
+        } catch (error) {
+            clearTurnstileTokenWaiter();
+            reject(error);
+        }
+    });
+}
+
+function resetTurnstileSession() {
+    state.turnstileToken = "";
+    state.turnstileSessionReady = false;
+    state.turnstileSessionPromise = null;
+    clearTurnstileTokenWaiter();
+    window._turnstileToken = "";
+    try { window.turnstile?.reset(); } catch (e) { /* ignore */ }
+}
+
+function requiresTurnstileSession(url) {
+    return typeof url === "string" && (
+        url.startsWith("/api/search") ||
+        url.startsWith("/api/satellite-lookup/") ||
+        url.startsWith("/api/location-intel") ||
+        url.startsWith("/api/satellite/")
+    );
+}
+
+async function ensureTurnstileSession() {
+    if (state.turnstileSessionReady || !turnstileWidget()) {
+        return;
+    }
+    if (!state.turnstileSessionPromise) {
+        state.turnstileSessionPromise = (async () => {
+            await requestTurnstileToken();
+            await fetchJson("/api/turnstile/session", {
+                forceTurnstileToken: true,
+                skipTurnstileSession: true,
+            });
+            state.turnstileSessionReady = true;
+            state.turnstileToken = "";
+            window._turnstileToken = "";
+        })().finally(() => {
+            state.turnstileSessionPromise = null;
+        });
+    }
+    await state.turnstileSessionPromise;
+}
+
 async function fetchJson(url, options = {}) {
-    const response = await fetch(url, options);
+    const fetchOptions = { ...options };
+    delete fetchOptions.forceTurnstileToken;
+    delete fetchOptions.skipTurnstileSession;
+    if (!options.skipTurnstileSession && requiresTurnstileSession(url)) {
+        await ensureTurnstileSession();
+    }
+    if (state.turnstileToken && options.forceTurnstileToken) {
+        fetchOptions.headers = {
+            ...(fetchOptions.headers || {}),
+            "X-Turnstile-Token": state.turnstileToken,
+        };
+    }
+    const response = await fetch(url, fetchOptions);
     let payload = null;
     try {
         payload = await response.json();
@@ -459,6 +593,9 @@ async function fetchJson(url, options = {}) {
         payload = null;
     }
     if (!response.ok) {
+        if (response.status === 403 && payload?.error && /turnstile/i.test(payload.error)) {
+            resetTurnstileSession();
+        }
         throw new Error(payload?.error || `Request failed: ${response.status}`);
     }
     return payload || {};

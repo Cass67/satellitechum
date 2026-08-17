@@ -5,6 +5,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     SATELLITECHUM_ENV=production
 
 RUN microdnf install -y python3.12 python3.12-pip && microdnf clean all && \
+    microdnf upgrade -y && \
     useradd --system --no-create-home --shell /usr/sbin/nologin satellitechum
 
 WORKDIR /app

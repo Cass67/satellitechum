@@ -1,3 +1,7 @@
+import base64
+import hashlib
+import hmac
+import time
 import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -5,8 +9,19 @@ from unittest.mock import patch
 import app
 
 
+def _test_turnstile_session_value(secret: str, expires_at: int) -> str:
+    message = str(expires_at)
+    signature = base64.urlsafe_b64encode(
+        hmac.new(secret.encode(), message.encode(), hashlib.sha256).digest()
+    ).rstrip(b"=").decode()
+    return f"{message}:{signature}"
+
+
 class LocationIntelTests(unittest.TestCase):
     def setUp(self):
+        app.app.config["TRUSTED_HOSTS"] = None
+        app.TURNSTILE_SITE_KEY = ""
+        app.TURNSTILE_SECRET_KEY = ""
         self.client = app.app.test_client()
         app.reverse_geocode_place.cache_clear()
         app.load_country_intel.cache_clear()
@@ -26,6 +41,70 @@ class LocationIntelTests(unittest.TestCase):
             }
         )
         app._satnogs_cache.clear()
+
+    def test_turnstile_accepts_valid_session_cookie_without_token(self):
+        app.TURNSTILE_SITE_KEY = "test-site"
+        app.TURNSTILE_SECRET_KEY = "test-secret"
+        cookie_value = _test_turnstile_session_value("test-secret", int(time.time()) + 3600)
+
+        with app.app.test_request_context(
+            "/api/search?q=London",
+            headers={"Cookie": f"satellite_chum_turnstile={cookie_value}"},
+        ):
+            ok, message = app._require_turnstile()
+
+        self.assertTrue(ok)
+        self.assertEqual(message, "")
+
+    @patch("app.verify_turnstile_token", return_value=True)
+    def test_turnstile_guard_rejects_raw_token_without_session_cookie(self, _mock_verify):
+        app.TURNSTILE_SITE_KEY = "test-site"
+        app.TURNSTILE_SECRET_KEY = "test-secret"
+
+        with app.app.test_request_context(
+            "/api/search?q=London",
+            headers={"X-Turnstile-Token": "raw-token"},
+        ):
+            ok, message = app._require_turnstile()
+
+        self.assertFalse(ok)
+        self.assertEqual(message, "Turnstile verification required.")
+
+    def test_index_hides_turnstile_when_secret_key_missing(self):
+        app.TURNSTILE_SITE_KEY = "test-site"
+        app.TURNSTILE_SECRET_KEY = ""
+
+        response = self.client.get("/")
+        html = response.get_data(as_text=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("cf-turnstile", html)
+
+    @patch("app.search_places", return_value=[])
+    @patch("app.verify_turnstile_token", return_value=True)
+    def test_turnstile_session_endpoint_sets_cookie_for_guarded_routes(
+        self, mock_verify, _mock_search
+    ):
+        app.TURNSTILE_SITE_KEY = "test-site"
+        app.TURNSTILE_SECRET_KEY = "test-secret"
+
+        response = self.client.get(
+            "/api/turnstile/session", headers={"X-Turnstile-Token": "raw-token"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(
+            any(
+                f"{app.TURNSTILE_SESSION_COOKIE}=" in header
+                for header in response.headers.getlist("Set-Cookie")
+            )
+        )
+        mock_verify.assert_called_once_with("raw-token")
+
+        mock_verify.reset_mock()
+        response = self.client.get("/api/search?q=London")
+
+        self.assertEqual(response.status_code, 200)
+        mock_verify.assert_not_called()
 
     def test_synthesize_location_summary_uses_country_facts(self):
         summary = app.synthesize_location_summary(

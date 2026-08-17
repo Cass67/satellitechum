@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+import base64
+import hashlib
+import hmac
 import math
 import os
 import re
@@ -129,6 +132,13 @@ def _is_production() -> bool:
     )
 
 
+TURNSTILE_SITE_KEY = _env_value("TURNSTILE_SITE_KEY", "")
+TURNSTILE_SECRET_KEY = _env_value("TURNSTILE_SECRET_KEY", "")
+TURNSTILE_SESSION_COOKIE = "satellite_chum_turnstile"
+TURNSTILE_SESSION_TTL_SECONDS = 60 * 60 * 2
+if _is_production() and bool(TURNSTILE_SITE_KEY) != bool(TURNSTILE_SECRET_KEY):
+    raise RuntimeError("TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY must both be set together")
+
 _secret_key = _env_value("SECRET_KEY", "")
 if _is_production() and not _secret_key:
     raise RuntimeError("SECRET_KEY must be set when SATELLITECHUM_ENV=production")
@@ -147,6 +157,64 @@ if _is_production() and not trusted_hosts:
     raise RuntimeError("TRUSTED_HOSTS must be set when SATELLITECHUM_ENV=production")
 if trusted_hosts:
     app.config["TRUSTED_HOSTS"] = trusted_hosts
+
+
+def _turnstile_session_value(expires_at: int) -> str:
+    message = str(expires_at)
+    signature = base64.urlsafe_b64encode(
+        hmac.new(TURNSTILE_SECRET_KEY.encode(), message.encode(), hashlib.sha256).digest()
+    ).rstrip(b"=").decode()
+    return f"{message}:{signature}"
+
+
+def _valid_turnstile_session(value: str | None) -> bool:
+    if not TURNSTILE_SECRET_KEY or not value or ":" not in value:
+        return False
+    expires_raw, signature = value.split(":", 1)
+    try:
+        expires_at = int(expires_raw)
+    except ValueError:
+        return False
+    if time.time() > expires_at:
+        return False
+    expected = _turnstile_session_value(expires_at).split(":", 1)[1]
+    return hmac.compare_digest(signature, expected)
+
+
+def _turnstile_enabled() -> bool:
+    return bool(TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY)
+
+
+def _set_turnstile_session_cookie(response):
+    expires_at = int(time.time()) + TURNSTILE_SESSION_TTL_SECONDS
+    response.set_cookie(
+        TURNSTILE_SESSION_COOKIE,
+        _turnstile_session_value(expires_at),
+        max_age=TURNSTILE_SESSION_TTL_SECONDS,
+        expires=expires_at,
+        httponly=True,
+        secure=bool(app.config.get("SESSION_COOKIE_SECURE")) or request.is_secure,
+        samesite="Lax",
+    )
+
+
+def _require_turnstile() -> tuple[bool, str]:
+    if not _turnstile_enabled():
+        return True, ""
+    if _valid_turnstile_session(request.cookies.get(TURNSTILE_SESSION_COOKIE)):
+        return True, ""
+    return False, "Turnstile verification required."
+
+
+def _require_turnstile_token() -> tuple[bool, str]:
+    if not _turnstile_enabled():
+        return True, ""
+    token = request.headers.get("X-Turnstile-Token", "")
+    if not token:
+        token = request.args.get("turnstile_token", "")
+    if token and verify_turnstile_token(token):
+        return True, ""
+    return False, "Turnstile verification required."
 
 
 def _clamp(v: float, lo: float, hi: float) -> float:
@@ -1301,6 +1369,23 @@ def load_satcat_details(catnr: int) -> dict:
     return details
 
 
+def verify_turnstile_token(token: str) -> bool:
+    if not TURNSTILE_SECRET_KEY or not token:
+        return False
+    try:
+        response = requests.post(
+            "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+            json={"secret": TURNSTILE_SECRET_KEY, "response": token},
+            headers={"Content-Type": "application/json"},
+            timeout=5,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        return bool(payload.get("success"))
+    except (requests.RequestException, ValueError, TypeError):
+        return False
+
+
 def _space_track_credentials() -> tuple[str, str]:
     username = (
         os.environ.get("SPACE_TRACK_IDENTITY")
@@ -1995,8 +2080,9 @@ def add_headers(response):
         "img-src 'self' data: https:; "
         "style-src 'self'; "
         "font-src 'self'; "
-        "script-src 'self'; "
-        "connect-src 'self'; "
+        "script-src 'self' https://challenges.cloudflare.com; "
+        "connect-src 'self' https://challenges.cloudflare.com; "
+        "frame-src https://challenges.cloudflare.com; "
         "object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
     )
     return response
@@ -2023,7 +2109,8 @@ def enforce_rate_limits():
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    site_key = TURNSTILE_SITE_KEY if _turnstile_enabled() else ""
+    return render_template("index.html", turnstile_site_key=site_key)
 
 
 @app.route("/api/satellites")
@@ -2038,6 +2125,17 @@ def satellites():
             "last_error": _tle_cache["last_error"],
         }
     )
+
+
+@app.route("/api/turnstile/session")
+def turnstile_session():
+    ok, msg = _require_turnstile_token()
+    if not ok:
+        return jsonify({"error": msg}), 403
+    response = jsonify({"ok": True})
+    if _turnstile_enabled():
+        _set_turnstile_session_cookie(response)
+    return response
 
 
 @app.route("/api/country")
@@ -2066,12 +2164,18 @@ def location_label():
 
 @app.route("/api/search")
 def search():
+    ok, msg = _require_turnstile()
+    if not ok:
+        return jsonify({"error": msg}), 403
     query = request.args.get("q", "", type=str)
     return jsonify({"items": search_places(query)})
 
 
 @app.route("/api/satellite-lookup/<int:catnr>")
 def satellite_lookup(catnr: int):
+    ok, msg = _require_turnstile()
+    if not ok:
+        return jsonify({"error": msg}), 403
     item = load_satellite_by_catnr(catnr)
     if not item:
         return jsonify({"error": f"No satellite TLE found for NORAD {catnr}"}), 404
@@ -2085,6 +2189,9 @@ def countries():
 
 @app.route("/api/location-intel")
 def location_intel():
+    ok, msg = _require_turnstile()
+    if not ok:
+        return jsonify({"error": msg}), 403
     name = request.args.get("name", "", type=str).strip()
     country = request.args.get("country", "", type=str).strip()
     lat, lon = _parse_finite_lat_lon()
@@ -2095,6 +2202,9 @@ def location_intel():
 
 @app.route("/api/satellite/<int:catnr>")
 def satellite_details(catnr: int):
+    ok, msg = _require_turnstile()
+    if not ok:
+        return jsonify({"error": msg}), 403
     fallback_name = request.args.get("name", "", type=str).strip()
     details = load_satcat_details(catnr)
     if details:
