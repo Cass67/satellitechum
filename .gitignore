@@ -91,3 +91,4 @@ config.toml
 
 # Python bytecode and caches.
 *.py[cod]
+satellitechum

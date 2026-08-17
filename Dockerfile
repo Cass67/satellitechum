@@ -1,24 +1,37 @@
-FROM oraclelinux:10-slim
+# ── Build stage ───────────────────────────────────────────────────────────────
+FROM golang:1.26.6 AS builder
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    SATELLITECHUM_ENV=production
+WORKDIR /build
 
-RUN microdnf install -y python3.12 python3.12-pip && microdnf clean all && \
-    microdnf upgrade -y && \
-    useradd --system --no-create-home --shell /usr/sbin/nologin satellitechum
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY *.go ./
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o satellitechum .
+
+# ── Healthcheck stage ─────────────────────────────────────────────────────────
+FROM alpine:3.20 AS busybox-static
+RUN apk add --no-cache busybox-static
+
+# ── Runtime stage ─────────────────────────────────────────────────────────────
+# Static Go binary (CGO_ENABLED=0) -> distroless/static: non-root, ~2MB, no OS
+# layer to have CVEs, and ca-certificates/tzdata baked in for outbound HTTPS.
+FROM gcr.io/distroless/static:nonroot
+
+# Fully-static busybox for the compose healthcheck (distroless has no shell,
+# and the default alpine busybox is musl-linked).
+COPY --from=busybox-static /bin/busybox.static /bin/busybox
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY app.py gunicorn.conf.py ./
-COPY static/ static/
+COPY --from=builder /build/satellitechum .
+COPY static/    static/
 COPY templates/ templates/
-
-USER satellitechum
 
 EXPOSE 6666
 
-CMD ["gunicorn", "-c", "gunicorn.conf.py", "app:app"]
+ENV PORT=6666
+
+USER nonroot
+
+CMD ["./satellitechum"]

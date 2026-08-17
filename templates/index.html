@@ -312,22 +312,22 @@
         </main>
     </div>
 
-    {% if turnstile_site_key %}
+    {{ if .TurnstileSiteKey }}
     <div class="cf-turnstile"
-         data-sitekey="{{ turnstile_site_key }}"
+         data-sitekey="{{ .TurnstileSiteKey }}"
          data-size="invisible"
          data-callback="turnstileSuccessCallback"
          data-error-callback="turnstileErrorCallback"
          data-timeout-callback="turnstileErrorCallback"
          data-expired-callback="turnstileExpiredCallback"></div>
-    {% endif %}
+    {{ end }}
 
     <script src="/static/vendor/three.global.js" data-cfasync="false"></script>
     <script src="/static/vendor/globe.gl.min.js" data-cfasync="false"></script>
     <script src="/static/vendor/satellite.min.js" data-cfasync="false"></script>
     <script src="/static/app.js?v=2" data-cfasync="false"></script>
-    {% if turnstile_site_key %}
+    {{ if .TurnstileSiteKey }}
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" defer data-cfasync="false"></script>
-    {% endif %}
+    {{ end }}
 </body>
 </html>

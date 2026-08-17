@@ -1,6 +1,11 @@
 # Go Rewrite — satellite-chum
 
-Status: planned. Reference implementation: `../uavchum` (already Go + distroless).
+Status: done (2026-08-17). Reference implementation: `../uavchum` (already Go + distroless).
+
+Parity verified against the Python app: all 10 API routes diffed side by side
+(JSON-identical; index.html differs by one trailing newline from Jinja's
+newline trimming). Turnstile 403/session flows match. distroless image built
+(25.6 MB) and compose stack (redis + app + healthcheck) runs healthy.
 
 ## Feasibility
 
@@ -45,42 +50,42 @@ extensions, no gunicorn-specific behavior.
 
 ## Step-by-step
 
-- [ ] 1. **Scaffold** — `go.mod`, `config.go` (env + .env loader, production
+- [x] 1. **Scaffold** — `go.mod`, `config.go` (env + .env loader, production
       validation), `main.go` (chi router, ProxyFix equivalent via
       `X-Forwarded-*` handling, security-header middleware, graceful shutdown,
       `PORT`/`GUNICORN_BIND` env).
-- [ ] 2. **TLE module** (`tle.go`) — Celestrak + SatNOGS fetch, TLE parse,
+- [x] 2. **TLE module** (`tle.go`) — Celestrak + SatNOGS fetch, TLE parse,
       dedupe/merge, balanced subset, fallback TLEs, background refresh goroutine
       with TTL/failure-TTL semantics matching Python exactly.
-- [ ] 3. **Rate limiter** (`ratelimit.go`) — sliding window, memory + Redis
+- [x] 3. **Rate limiter** (`ratelimit.go`) — sliding window, memory + Redis
       backend, per-endpoint limits, 429 JSON + Retry-After.
-- [ ] 4. **Turnstile** (`turnstile.go`) — token verification, signed session
+- [x] 4. **Turnstile** (`turnstile.go`) — token verification, signed session
       cookie, `_require_turnstile` guard for gated routes.
-- [ ] 5. **Location APIs** (`location.go`) — country reverse geocode, place
+- [x] 5. **Location APIs** (`location.go`) — country reverse geocode, place
       label, country intel (World Bank / Open-Meteo / Wikidata), place
       reference, nearby landmarks, search.
-- [ ] 6. **Satellite details** (`satellite.go`) — Celestrak satcat, space-track
+- [x] 6. **Satellite details** (`satellite.go`) — Celestrak satcat, space-track
       (login + query), SatNOGS, Wikipedia reference, `infer_satellite_profile`
       heuristics port, field sources + confidence scoring.
-- [ ] 7. **Frontend** — serve `static/` and `templates/index.html` via
+- [x] 7. **Frontend** — serve `static/` and `templates/index.html` via
       `html/template` (replace `{{ turnstile_site_key }}` with `{{ .TurnstileSiteKey }}`
       — single variable, trivial).
-- [ ] 8. **Tests** — port `tests/test_location_intel.py` (377 lines) to Go table
+- [x] 8. **Tests** — port `tests/test_location_intel.py` (377 lines) to Go table
       tests; add unit tests for TLE parse, rate limiter, turnstile cookie,
       profile inference. uavchum has `_test.go` patterns to copy.
-- [ ] 9. **Dockerfile** — mirror uavchum: `golang:1.26` builder
+- [x] 9. **Dockerfile** — mirror uavchum: `golang:1.26` builder
       (`CGO_ENABLED=0`, `-ldflags="-s -w"`) → `gcr.io/distroless/static:nonroot`
       with static busybox for healthcheck, `COPY static/ templates/`.
-- [ ] 10. **compose.yml** — swap app build; healthcheck → busybox
+- [x] 10. **compose.yml** — swap app build; healthcheck → busybox
       `wget -qO- http://localhost:6666/` (or TCP via busybox); keep redis +
       cloudflared services; drop `GUNICORN_*` env, use `PORT=6666`.
-- [ ] 11. **Deploy** — verify `deploy/` (ansible, systemd unit, podman compose
+- [x] 11. **Deploy** — verify `deploy/` (ansible, systemd unit, podman compose
       service) works unchanged against new image; update any
       gunicorn/python references.
-- [ ] 12. **Parity check** — run Python and Go side by side; diff API responses
+- [x] 12. **Parity check** — run Python and Go side by side; diff API responses
       for all 10 routes (satellite details is the hairy one — compare
       `field_sources`/`source_confidence` JSON exactly).
-- [ ] 13. **Ship** — delete Python (`app.py`, `requirements.txt`,
+- [x] 13. **Ship** — delete Python (`app.py`, `requirements.txt`,
       `gunicorn.conf.py`, `.venv`) once parity passes; update README +
       `.pre-commit-config.yaml` (add golangci-lint/go hooks if desired);
       merge to main.
