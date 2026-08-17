@@ -86,3 +86,8 @@ $RECYCLE.BIN/
 *.swo
 *~
 
+config.toml
+/.repo-guard/reports/
+
+# Python bytecode and caches.
+*.py[cod]
