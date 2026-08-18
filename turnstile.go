@@ -54,6 +54,7 @@ func (a *App) setTurnstileSessionCookie(w http.ResponseWriter, secure bool) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     turnstileCookieName,
 		Value:    turnstileSessionValue(a.cfg.TurnstileSecretKey, expiresAt),
+		Path:     "/",
 		MaxAge:   turnstileSessionTTL,
 		Expires:  time.Unix(expiresAt, 0).UTC(),
 		HttpOnly: true,

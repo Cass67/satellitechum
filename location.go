@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -215,7 +216,7 @@ func (a *App) loadOpenMeteoCountryProfile(countryName string) map[string]any {
 		if err := a.httpGetJSON(context.Background(), openMeteoSearch, q, a.reqTimeout(), &payload); err == nil && len(payload.Results) > 0 {
 			var chosen map[string]any
 			for _, row := range payload.Results {
-				if strings.ToLower(strOf(row, "name")) == strings.ToLower(cleaned) &&
+				if strings.EqualFold(strOf(row, "name"), cleaned) &&
 					strings.HasPrefix(strOf(row, "feature_code"), "PCL") {
 					chosen = row
 					break
@@ -318,7 +319,7 @@ func (a *App) loadWikidataCountryFacts(countryName string) map[string]any {
 		if err := a.httpGetJSON(context.Background(), wikidataAPI, q, a.reqTimeout(), &searchPayload); err == nil {
 			entityID := ""
 			for _, hit := range searchPayload.Search {
-				if strings.ToLower(strOf(hit, "label")) == strings.ToLower(cleaned) &&
+				if strings.EqualFold(strOf(hit, "label"), cleaned) &&
 					strings.Contains(strings.ToLower(strOf(hit, "description")), "country") {
 					entityID = strOf(hit, "id")
 					break
@@ -417,14 +418,19 @@ func (a *App) loadCountryIntel(countryName string) map[string]any {
 		ctx := context.Background()
 		fatal := false
 		for _, params := range payloads {
-			got, err := a.httpGetCountryByName(ctx, countryName, params)
+			// app.py treats non-ok responses as "try the next variant" and
+			// only transport exceptions as fatal.
+			var got []map[string]any
+			status, err := a.httpGetJSONStatus(ctx, fmt.Sprintf(restCountriesName, url.PathEscape(countryName)), params, a.reqTimeout(), &got)
 			if err != nil {
-				fatal = true // RequestException: app.py returns {}
+				fatal = true
 				break
 			}
-			payload = got
-			if len(payload) > 0 {
-				break
+			if status >= 200 && status < 300 {
+				payload = got
+				if len(payload) > 0 {
+					break
+				}
 			}
 		}
 		if fatal {
@@ -477,6 +483,10 @@ func (a *App) loadCountryIntel(countryName string) map[string]any {
 		demonyms, _ := item["demonyms"].(map[string]any)
 		dem, _ := demonyms["eng"].(map[string]any)
 		nameMap, _ := item["name"].(map[string]any)
+		timezones := []any{}
+		if tz, ok := item["timezones"].([]any); ok {
+			timezones = tz
+		}
 		result = map[string]any{
 			"official_name":    strOf(nameMap, "official"),
 			"population":       population,
@@ -488,7 +498,7 @@ func (a *App) loadCountryIntel(countryName string) map[string]any {
 			"area_km2":         item["area"],
 			"languages":        languages,
 			"currencies":       currencyNames,
-			"timezones":        item["timezones"],
+			"timezones":        timezones,
 			"demonym":          strOf(dem, "m"),
 			"independent":      item["independent"],
 			"un_member":        item["unMember"],
@@ -512,12 +522,6 @@ func boolStr(cond bool, s string) string {
 		return s
 	}
 	return ""
-}
-
-func (a *App) httpGetCountryByName(ctx context.Context, countryName string, params url.Values) ([]map[string]any, error) {
-	var payload []map[string]any
-	err := a.httpGetJSON(ctx, fmt.Sprintf(restCountriesName, url.PathEscape(countryName)), params, a.reqTimeout(), &payload)
-	return payload, err
 }
 
 // synthesizeLocationSummary mirrors app.py synthesize_location_summary.
@@ -639,9 +643,12 @@ func (a *App) loadWikipediaSummaryByTitle(title string) map[string]any {
 	result := map[string]any{}
 	if title != "" {
 		var payload struct {
-			Title       string `json:"title"`
-			Extract     string `json:"extract"`
-			Description string `json:"description"`
+			// RawMessage distinguishes a missing title (fall back to the
+			// requested title) from an explicit empty one, like Python's
+			// payload.get("title", title).
+			Title       json.RawMessage `json:"title"`
+			Extract     string          `json:"extract"`
+			Description string          `json:"description"`
 			Thumbnail   struct {
 				Source string `json:"source"`
 			} `json:"thumbnail"`
@@ -652,9 +659,12 @@ func (a *App) loadWikipediaSummaryByTitle(title string) map[string]any {
 			} `json:"content_urls"`
 		}
 		if err := a.httpGetJSON(context.Background(), fmt.Sprintf(wikipediaSummary, url.PathEscape(title)), nil, a.reqTimeout(), &payload); err == nil {
-			t := payload.Title
-			if t == "" {
-				t = title
+			t := title
+			if len(payload.Title) > 0 && string(payload.Title) != "null" {
+				var got string
+				if err := json.Unmarshal(payload.Title, &got); err == nil {
+					t = got
+				}
 			}
 			result = map[string]any{
 				"title":       t,

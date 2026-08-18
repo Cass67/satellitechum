@@ -167,7 +167,15 @@ func (a *App) initRedis() {
 	if rawURL == "" {
 		return
 	}
-	client := redis.NewClient(&redis.Options{Addr: rawURL, DialTimeout: 2 * time.Second})
+	// go-redis v9 does not parse URLs into Options; a bare host:port
+	// (no scheme) is accepted as Addr for convenience.
+	opts := &redis.Options{DialTimeout: 2 * time.Second}
+	if parsed, err := redis.ParseURL(rawURL); err == nil {
+		opts = parsed
+	} else {
+		opts.Addr = rawURL
+	}
+	client := redis.NewClient(opts)
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	if err := client.Ping(ctx).Err(); err != nil {
@@ -224,6 +232,24 @@ func (a *App) httpGetJSON(ctx context.Context, rawURL string, q url.Values, time
 		return fmt.Errorf("http %d for %s", resp.StatusCode, rawURL)
 	}
 	return json.NewDecoder(resp.Body).Decode(out)
+}
+
+// httpGetJSONStatus is like httpGetJSON but reports non-2xx as a status
+// instead of an error, so callers can distinguish transport failures from
+// HTTP error responses.
+func (a *App) httpGetJSONStatus(ctx context.Context, rawURL string, q url.Values, timeout time.Duration, out any) (int, error) {
+	resp, err := a.httpGet(ctx, rawURL, q, timeout)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return resp.StatusCode, nil
+	}
+	if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
+		return resp.StatusCode, err
+	}
+	return resp.StatusCode, nil
 }
 
 func (a *App) reqTimeout() time.Duration {

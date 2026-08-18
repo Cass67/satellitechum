@@ -42,7 +42,10 @@ services:
     image: docker.io/cloudflare/cloudflared:latest
     restart: unless-stopped
     command: tunnel --no-autoupdate run
-    env_file: .env
+    # Only the tunnel token; the app's other .env secrets (SECRET_KEY,
+    # Turnstile/Space-Track keys) stay out of the cloudflared container.
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
     cap_drop:
       - ALL
     security_opt:

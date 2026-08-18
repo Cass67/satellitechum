@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"net/http/cookiejar"
 	"net/http/httptest"
 	"strings"
 	"sync/atomic"
@@ -101,6 +102,52 @@ func TestTurnstileSessionEndpointSetsCookieForGuardedRoutes(t *testing.T) {
 	}
 	if got := verifyCalls.Load(); got != 1 {
 		t.Errorf("verify calls = %d, want 1 (cookie should not re-verify)", got)
+	}
+}
+
+// TestTurnstileSessionCookieJarFlow proves the session cookie works through
+// a real browser-style cookie jar (RFC 6265 path matching), not just via a
+// hand-set Cookie header. Regression: the cookie was once emitted without
+// Path=/, so jars scoped it to /api/turnstile and every guarded route 403'd.
+func TestTurnstileSessionCookieJarFlow(t *testing.T) {
+	stubSearchURLs(t)
+	a := newTurnstileTestApp(t, "test-site", "test-secret")
+	// The session handler only needs a valid token when Turnstile is on;
+	// stub the Cloudflare verify endpoint.
+	verify := stubServer(t, func(path, query string) (int, string) {
+		return 200, `{"success":true}`
+	})
+	overrideURL(t, &turnstileVerifyURL, verify.URL+"/siteverify")
+
+	srv := httptest.NewServer(a.router())
+	defer srv.Close()
+
+	jar, _ := cookiejar.New(nil)
+	client := &http.Client{Jar: jar}
+
+	req, _ := http.NewRequest(http.MethodGet, srv.URL+"/api/turnstile/session", nil)
+	req.Header.Set("X-Turnstile-Token", "dummy")
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("session request: %v", err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != 200 {
+		t.Fatalf("session status = %d", resp.StatusCode)
+	}
+	if len(jar.Cookies(resp.Request.URL)) == 0 {
+		t.Fatal("no session cookie stored in jar")
+	}
+
+	// The guarded route lives at a different path; the jar must send the
+	// cookie there. Without Path=/ it would 403.
+	resp2, err := client.Get(srv.URL + "/api/search?q=London")
+	if err != nil {
+		t.Fatalf("search request: %v", err)
+	}
+	resp2.Body.Close()
+	if resp2.StatusCode != 200 {
+		t.Errorf("guarded route via cookie jar: status = %d, want 200", resp2.StatusCode)
 	}
 }
 

@@ -59,7 +59,7 @@ func parseTLEPayload(payload string) []SatelliteItem {
 }
 
 func extractCatnr(line1 string) *int {
-	if !strings.HasPrefix(line1, "1 ") {
+	if !strings.HasPrefix(line1, "1 ") || len(line1) < 7 {
 		return nil
 	}
 	token := strings.TrimSpace(line1[2:7])

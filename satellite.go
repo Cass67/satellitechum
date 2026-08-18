@@ -95,7 +95,10 @@ func (a *App) loadSpaceTrackSatcatDetails(ctx context.Context, catnr int) map[st
 		if err == nil {
 			resp.Body.Close()
 			if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-				getReq, err := http.NewRequestWithContext(reqCtx, http.MethodGet,
+				// app.py gives the login and the query separate timeouts.
+				queryCtx, queryCancel := context.WithTimeout(context.Background(), a.satcatTimeout())
+				defer queryCancel()
+				getReq, err := http.NewRequestWithContext(queryCtx, http.MethodGet,
 					fmt.Sprintf(spaceTrackSatcatURL, catnr), nil)
 				if err == nil {
 					getReq.Header.Set("User-Agent", a.cfg.UserAgent)

@@ -11,7 +11,6 @@ import (
 
 var (
 	nonAlnumRE = regexp.MustCompile(`[^a-z0-9]+`)
-	wsRE       = regexp.MustCompile(`\s+`)
 )
 
 func clamp(v, lo, hi float64) float64 { return max(lo, min(hi, v)) }

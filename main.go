@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -157,7 +158,16 @@ func (a *App) trustedHosts(next http.Handler) http.Handler {
 			host = strings.ToLower(host)
 			matched := false
 			for _, trusted := range a.cfg.TrustedHosts {
-				if strings.ToLower(trusted) == host {
+				trusted = strings.ToLower(trusted)
+				// Flask's trusted_hosts also accepts *.example.com wildcards.
+				if strings.HasPrefix(trusted, "*.") {
+					if strings.HasSuffix(host, trusted[1:]) || host == trusted[2:] {
+						matched = true
+						break
+					}
+					continue
+				}
+				if trusted == host {
 					matched = true
 					break
 				}
@@ -172,6 +182,13 @@ func (a *App) trustedHosts(next http.Handler) http.Handler {
 }
 
 func (a *App) handleStatic(w http.ResponseWriter, r *http.Request) {
+	// Flask's /static/<path:filename> 404s on directories; http.FileServer
+	// would show a listing. Match Flask.
+	path := strings.TrimPrefix(r.URL.Path, "/static/")
+	if info, err := os.Stat(filepath.Join("static", filepath.Clean("/"+path))); err == nil && info.IsDir() {
+		http.NotFound(w, r)
+		return
+	}
 	http.StripPrefix("/static/", http.FileServer(http.Dir("static"))).ServeHTTP(w, r)
 }
 
