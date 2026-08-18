@@ -30,7 +30,7 @@ Build and run the Go server:
 go run .
 ```
 
-The app listens on `http://127.0.0.1:8000` by default (`PORT` to override).
+The app listens on `http://localhost:8000` by default (`PORT` to override).
 
 Useful environment variables:
 
@@ -118,4 +118,4 @@ node --check static/app.js
 
 ## Live site
 
-App can be seen live at [https://satchum.hehaw.net)
+App can be seen live at [satchum.hehaw.net](https://satchum.hehaw.net)

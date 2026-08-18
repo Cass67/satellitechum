@@ -63,6 +63,7 @@ Library/Application Support/BraveSoftware/
 Library/Application Support/Firefox/
 history.jsonl
 sessions/
+.sessions/
 log/
 
 # OS and editor workspace noise.

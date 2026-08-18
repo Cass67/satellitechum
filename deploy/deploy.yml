@@ -53,6 +53,7 @@
           --exclude='.playwright-cli'
           --exclude='output'
           --exclude='tests'
+          --exclude='satellitechum'
           --exclude='*.md'
           -C {{ playbook_dir }}/../ .
       delegate_to: localhost
