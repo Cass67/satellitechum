@@ -16,6 +16,7 @@ Live satellite tracking over Earth with a 3D globe, place lookup, above-horizon 
 - CelesTrak TLE and SATCAT
 - SatNOGS TLE and satellite metadata
 - optional Space-Track SATCAT fallback
+- Nominatim (OpenStreetMap) reverse geocoding and search
 - Open-Meteo geocoding
 - BigDataCloud reverse geocoding
 - World Bank population data
@@ -23,21 +24,17 @@ Live satellite tracking over Earth with a 3D globe, place lookup, above-horizon 
 
 ## Local Development
 
-Create or reuse the project virtual environment, install dependencies, and run the Flask server:
+Build and run the Go server:
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-python app.py
+go run .
 ```
 
-The app listens on `http://127.0.0.1:8000` by default.
+The app listens on `http://127.0.0.1:8000` by default (`PORT` to override).
 
 Useful environment variables:
 
 - `PORT`
-- `FLASK_DEBUG`
 - `SATELLITECHUM_MAX_SATELLITES`
 - `SATELLITECHUM_TLE_TIMEOUT`
 - `SATELLITECHUM_SATCAT_TIMEOUT`
@@ -64,7 +61,7 @@ Production hardening already included:
 - `ProxyFix` support for reverse-proxy deployments
 - strict same-origin CSP for scripts, styles, fonts, and browser fetches
 - app-side rate limiting on public API routes
-- Gunicorn-based container runtime
+- static Go binary in a distroless/static nonroot container
 - read-only container filesystem and dropped Linux capabilities in Compose
 
 ## Container Deployment
@@ -78,8 +75,8 @@ docker compose up --build
 
 The Compose stack includes:
 
-- `redis`: ephemeral Redis instance for shared rate-limit state across workers
-- `app`: Gunicorn serving the Flask app on the internal network
+- `redis`: ephemeral Redis instance for shared rate-limit state
+- `app`: static Go binary serving the app on the internal network
 - `tunnel`: `cloudflared` sidecar for internet exposure without binding a public host port
 
 Fill in `TUNNEL_TOKEN` in `.env` before using the tunnel.
@@ -102,7 +99,7 @@ The playbook archives the repo, uploads it to the target host, extracts it into 
 
 ## Project Layout
 
-- `app.py`: Flask app and API routes
+- `*.go`: Go server, API routes, TLE pipeline, rate limiting, Turnstile
 - `templates/index.html`: main UI shell
 - `static/app.js`: globe UI, polling, caching, controls
 - `static/style.css`: app styling and theme variants
@@ -114,7 +111,8 @@ The playbook archives the repo, uploads it to the target host, extracts it into 
 Basic checks used during development:
 
 ```bash
-python3 -m py_compile app.py
+go build ./...
+go test ./...
 node --check static/app.js
 ```
 

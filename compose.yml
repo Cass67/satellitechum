@@ -18,7 +18,7 @@ services:
     env_file: .env
     environment:
       SATELLITECHUM_ENV: production
-      GUNICORN_BIND: 0.0.0.0:6666
+      PORT: "6666"
       REDIS_URL: redis://redis:6379/0
     depends_on:
       - redis
@@ -32,7 +32,8 @@ services:
     networks:
       - skynet
     healthcheck:
-      test: ["CMD", "python3", "-c", "import socket; socket.create_connection(('localhost', 6666), timeout=2).close()"]
+      test:
+        ["CMD", "/bin/busybox", "wget", "-qO-", "http://localhost:6666/healthz"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -41,7 +42,10 @@ services:
     image: docker.io/cloudflare/cloudflared:latest
     restart: unless-stopped
     command: tunnel --no-autoupdate run
-    env_file: .env
+    # Only the tunnel token; the app's other .env secrets (SECRET_KEY,
+    # Turnstile/Space-Track keys) stay out of the cloudflared container.
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
     cap_drop:
       - ALL
     security_opt:

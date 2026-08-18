@@ -91,3 +91,5 @@ config.toml
 
 # Python bytecode and caches.
 *.py[cod]
+satellitechum
+.pi-subagents/

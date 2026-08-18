@@ -1,0 +1,92 @@
+{
+  "runId": "51cf4eb4",
+  "agent": "reviewer",
+  "task": "Audit a completed Go rewrite of a Flask app at /Users/cass/git/satellite-chum (branch go-rewrite, HEAD 3085d93). The Python reference is available via `git -C /Users/cass/git/satellite-chum show main:app.py` (2,277 lines). The Go files are app.go, cache.go, config.go, location.go, main.go, profile.go, ratelimit.go, satellite.go, tle.go, textutil.go, turnstile.go + *_test.go, plus Dockerfile, compose.yml, deploy/satellite-chum.service.\n\nContext: satellite tracking web app. chi router, go-redis (optional), stdlib otherwise. Frontend (static/) untouched. Already passed side-by-side JSON parity vs the running Python app for all 10 routes; `go test -race` green; staticcheck has 3 nits (2x SA6005 EqualFold at location.go:218,321; 1x unused wsRE at textutil.go:14).\n\nAudit for REAL production problems only, not style:\n1. **Security**: header middleware, trusted-hosts enforcement, Turnstile cookie (HMAC, expiry, secure/httponly/samesite), rate limit bypasses, header injection, html/template injection, error info leaks, request body limits.\n2. **Correctness vs Python**: porting bugs — normalizeText/normalizeName/stripAccents, float formatting (pyRound/pyFloatStr/floatParam), TLE line parsing, balanced subset selection, country code lowercasing, satcat merge precedence, failure-cache TTLs, rate limit window math. Compare against `git show main:app.py`.\n3. **Concurrency**: data races on App fields (caches, tleMu, rateMu), LRU correctness, background refresh goroutine lifecycle, context cancellation in httpGetJSON (cancelOnClose).\n4. **Container/deploy**: Dockerfile (distroless/static:nonroot, busybox healthcheck, ca-certificates), compose.yml, deploy/satellite-chum.service (ExecStart /app/satellitechum, EnvironmentFile, PORT=6666).\n5. **Go pitfalls**: JSON omitempty vs Python dicts, html/template vs Jinja delimiters in templates/index.html, chi middleware ordering, /static routing.\n\nReport: numbered findings with file:line, severity (blocker/major/minor), one-line fix. Mark speculative findings. End with verdict: SHIP / SHIP-WITH-NITS / FIX-FIRST.",
+  "exitCode": 1,
+  "usage": {
+    "input": 0,
+    "output": 0,
+    "cacheRead": 0,
+    "cacheWrite": 0,
+    "cost": 0,
+    "turns": 4
+  },
+  "model": "llama-cpp/huihui-qwen3.8-27b-abliterated-gguf-rocm:high",
+  "attemptedModels": [
+    "llama-cpp/huihui-qwen3.8-27b-abliterated-gguf-rocm:high"
+  ],
+  "modelAttempts": [
+    {
+      "model": "llama-cpp/huihui-qwen3.8-27b-abliterated-gguf-rocm:high",
+      "success": false,
+      "exitCode": 1,
+      "error": "Stream ended without finish_reason",
+      "usage": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0,
+        "cost": 0,
+        "turns": 4
+      }
+    }
+  ],
+  "durationMs": 17109,
+  "toolCount": 0,
+  "error": "Stream ended without finish_reason",
+  "launchContractDigest": "6008fc0284643fe86065456f0a3ba4097a46cd50f03ceb23be06fb208d75ca49",
+  "acceptance": {
+    "status": "rejected",
+    "evidenceStatus": "rejected",
+    "explicit": false,
+    "effectiveAcceptance": {
+      "level": "attested",
+      "explicit": false,
+      "inferredReason": [
+        "read-only/reviewer-style agent"
+      ],
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "must": "Return concrete findings with file paths and severity when applicable",
+          "evidence": [
+            "review-findings",
+            "residual-risks"
+          ],
+          "severity": "required"
+        }
+      ],
+      "evidence": [
+        "review-findings",
+        "residual-risks"
+      ],
+      "verify": [],
+      "stopRules": []
+    },
+    "inferredReason": [
+      "read-only/reviewer-style agent"
+    ],
+    "criteria": [
+      {
+        "id": "criterion-1",
+        "must": "Return concrete findings with file paths and severity when applicable",
+        "evidence": [
+          "review-findings",
+          "residual-risks"
+        ],
+        "severity": "required"
+      }
+    ],
+    "runtimeChecks": [
+      {
+        "id": "attestation",
+        "status": "failed",
+        "message": "Structured acceptance report not found."
+      }
+    ],
+    "verifyRuns": [],
+    "childReportParseError": "Structured acceptance report not found."
+  },
+  "transcriptPath": "/Users/cass/git/satellite-chum/.pi-subagents/artifacts/51cf4eb4_reviewer_0_transcript.jsonl",
+  "timestamp": 1787015425582
+}
