@@ -261,8 +261,12 @@ func (a *App) handleLocationLabel(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 400, map[string]any{"error": "finite lat and lon are required"})
 		return
 	}
-	latRound := pyRound(clamp(lat, -90, 90), 2)
-	lonRound := pyRound(pyMod(lon+180, 360)-180, 2)
+	// 1 decimal, matching handleCountry: at 2 dp the key space is ~648M cells
+	// against a cache of a few thousand, so a client walking the grid misses
+	// every time and each miss is an outbound geocoder call. 1 dp (~11 km) is
+	// still finer than the place names this endpoint returns.
+	latRound := pyRound(clamp(lat, -90, 90), 1)
+	lonRound := pyRound(pyMod(lon+180, 360)-180, 1)
 	writeJSON(w, 200, a.reverseGeocodePlace(latRound, lonRound))
 }
 

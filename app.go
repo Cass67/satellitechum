@@ -76,7 +76,9 @@ type App struct {
 	rlMu    sync.Mutex
 	rlState map[rlKey]rlEntry
 
-	// LRU caches (sizes mirror app.py lru_cache maxsize values).
+	// LRU caches (sizes mirror app.py lru_cache maxsize values, except the
+	// geo* caches, which are sized to absorb coordinate-walking clients so
+	// misses do not become outbound geocoder calls).
 	geoCountry    *lruCache[latlonKey, map[string]any]
 	geoPlace      *lruCache[latlonKey, map[string]any]
 	geoBigdata    *lruCache[latlonKey, map[string]any]
@@ -118,9 +120,9 @@ func newApp(cfg Config) *App {
 		http:          &http.Client{},
 		logger:        slog.Default(),
 		rlState:       map[rlKey]rlEntry{},
-		geoCountry:    newLRUCache[latlonKey, map[string]any](512),
-		geoPlace:      newLRUCache[latlonKey, map[string]any](2048),
-		geoBigdata:    newLRUCache[latlonKey, map[string]any](2048),
+		geoCountry:    newLRUCache[latlonKey, map[string]any](8192),
+		geoPlace:      newLRUCache[latlonKey, map[string]any](8192),
+		geoBigdata:    newLRUCache[latlonKey, map[string]any](8192),
 		worldBank:     newLRUCache[string, map[string]any](512),
 		omCountry:     newLRUCache[string, map[string]any](256),
 		omPlace:       newLRUCache[omPlaceKey, map[string]any](512),
@@ -146,9 +148,9 @@ func (a *App) resetCaches() {
 	a.satcat = newTTLCache()
 	a.spaceTrack = newTTLCache()
 	a.satnogs = newTTLCache()
-	a.geoCountry = newLRUCache[latlonKey, map[string]any](512)
-	a.geoPlace = newLRUCache[latlonKey, map[string]any](2048)
-	a.geoBigdata = newLRUCache[latlonKey, map[string]any](2048)
+	a.geoCountry = newLRUCache[latlonKey, map[string]any](8192)
+	a.geoPlace = newLRUCache[latlonKey, map[string]any](8192)
+	a.geoBigdata = newLRUCache[latlonKey, map[string]any](8192)
 	a.worldBank = newLRUCache[string, map[string]any](512)
 	a.omCountry = newLRUCache[string, map[string]any](256)
 	a.omPlace = newLRUCache[omPlaceKey, map[string]any](512)
@@ -201,6 +203,11 @@ func (c cancelOnClose) Close() error {
 
 // httpGet issues a GET with the app user agent and a per-call timeout.
 func (a *App) httpGet(ctx context.Context, rawURL string, q url.Values, timeout time.Duration) (*http.Response, error) {
+	if isNominatimURL(rawURL) {
+		if err := awaitNominatim(ctx); err != nil {
+			return nil, err
+		}
+	}
 	reqCtx, cancel := context.WithTimeout(ctx, timeout)
 	u := rawURL
 	if q != nil {
