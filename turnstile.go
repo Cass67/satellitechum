@@ -51,6 +51,10 @@ func (a *App) validTurnstileSession(value string) bool {
 func (a *App) setTurnstileSessionCookie(w http.ResponseWriter, secure bool) {
 	expiresAt := time.Now().Unix() + turnstileSessionTTL
 	secure = secure || a.cfg.SessionCookieSecure
+	// Secure follows the request's own scheme, OR-ed with the
+	// SessionCookieSecure config flag; off only for plain-HTTP local
+	// development, where a Secure cookie would never be stored.
+	// nosemgrep: go.lang.security.audit.net.cookie-missing-secure.cookie-missing-secure
 	http.SetCookie(w, &http.Cookie{
 		Name:     turnstileCookieName,
 		Value:    turnstileSessionValue(a.cfg.TurnstileSecretKey, expiresAt),
