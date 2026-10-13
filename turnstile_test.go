@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -137,6 +138,16 @@ func TestTurnstileSessionCookieJarFlow(t *testing.T) {
 	}
 	if len(jar.Cookies(resp.Request.URL)) == 0 {
 		t.Fatal("no session cookie stored in jar")
+	}
+
+	// The server half above is useless if the frontend stops sending the
+	// token: that exact regression 403'd every route in a sibling app.
+	js, err := os.ReadFile("static/app.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(js), `"X-Turnstile-Token"`) || !strings.Contains(string(js), "/api/turnstile/session") {
+		t.Fatal("static/app.js no longer sends X-Turnstile-Token to /api/turnstile/session")
 	}
 
 	// The guarded route lives at a different path; the jar must send the

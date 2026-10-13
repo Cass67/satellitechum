@@ -134,6 +134,9 @@ func (a *App) securityHeaders(next http.Handler) http.Handler {
 		h.Set("Cross-Origin-Opener-Policy", "same-origin")
 		h.Set("Cross-Origin-Resource-Policy", "same-origin")
 		h.Set("X-XSS-Protection", "0")
+		if requestScheme(r) == "https" {
+			h.Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		}
 		h.Set("Content-Security-Policy",
 			"default-src 'self'; "+
 				"img-src 'self' data: https:; "+

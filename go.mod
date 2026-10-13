@@ -2,6 +2,8 @@ module satellitechum
 
 go 1.27
 
+toolchain go1.27.2
+
 require (
 	github.com/go-chi/chi/v5 v5.3.1
 	github.com/redis/go-redis/v9 v9.22.0

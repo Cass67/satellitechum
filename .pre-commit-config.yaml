@@ -92,3 +92,183 @@ repos:
         language: system
         pass_filenames: false
 # repo-guard:base:end
+
+# repo-guard:python:start
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check
+        entry: >-
+          bash -lc 'if [ -n "${VIRTUAL_ENV:-}" ] && [ -x
+          "$VIRTUAL_ENV/bin/ruff" ]; then "$VIRTUAL_ENV/bin/ruff" check
+          --fix "$@"; elif [ -x ./.venv/bin/ruff ]; then
+          ./.venv/bin/ruff check --fix "$@"; elif [ -x ./venv/bin/ruff ];
+          then ./venv/bin/ruff check --fix "$@"; else ruff check --fix
+          "$@"; fi' --
+        language: system
+        files: \.pyi?$
+      - id: ruff-format
+        name: ruff format
+        entry: >-
+          bash -lc 'if [ -n "${VIRTUAL_ENV:-}" ] && [ -x
+          "$VIRTUAL_ENV/bin/ruff" ]; then "$VIRTUAL_ENV/bin/ruff" format
+          "$@"; elif [ -x ./.venv/bin/ruff ]; then ./.venv/bin/ruff format
+          "$@"; elif [ -x ./venv/bin/ruff ]; then ./venv/bin/ruff format
+          "$@"; else ruff format "$@"; fi' --
+        language: system
+        files: \.pyi?$
+      - id: bandit
+        name: bandit
+        entry: >-
+          bash -lc 'if [ -f bandit.yaml ]; then conf="-c bandit.yaml"; else
+          conf=""; fi; if [ -n "${VIRTUAL_ENV:-}" ] && [ -x
+          "$VIRTUAL_ENV/bin/bandit" ]; then "$VIRTUAL_ENV/bin/bandit" -q $conf
+          "$@"; elif [ -x ./.venv/bin/bandit ]; then ./.venv/bin/bandit -q
+          $conf "$@"; elif [ -x ./venv/bin/bandit ]; then ./venv/bin/bandit
+          -q $conf "$@"; else bandit -q $conf "$@"; fi' --
+        language: system
+        files: \.pyi?$
+        # B101 (assert_used) fires on every pytest assert, which makes this hook
+        # unpassable for any commit that touches a test. Bandit audits shipped
+        # code; test files are not a deployment surface.
+        exclude: (^|/)tests?/|(^|/)test_[^/]*\.py$|(^|/)conftest\.py$
+      - id: radon-cc
+        name: radon complexity
+        entry: >-
+          bash -lc 'if [ -n "${VIRTUAL_ENV:-}" ] && [ -x
+          "$VIRTUAL_ENV/bin/radon" ]; then "$VIRTUAL_ENV/bin/radon" cc -s
+          -n B "$@"; elif [ -x ./.venv/bin/radon ]; then
+          ./.venv/bin/radon cc -s -n B "$@"; elif [ -x ./venv/bin/radon ];
+          then ./venv/bin/radon cc -s -n B "$@"; else radon cc -s -n B
+          "$@"; fi' --
+        language: system
+        files: \.pyi?$
+      - id: vulture
+        name: vulture dead code
+        entry: >-
+          bash -lc 'if [ -n "${VIRTUAL_ENV:-}" ] && [ -x
+          "$VIRTUAL_ENV/bin/vulture" ]; then "$VIRTUAL_ENV/bin/vulture"
+          --min-confidence 80 "$@"; elif [ -x ./.venv/bin/vulture ]; then
+          ./.venv/bin/vulture --min-confidence 80 "$@"; elif [ -x
+          ./venv/bin/vulture ]; then ./venv/bin/vulture --min-confidence 80
+          "$@"; else vulture --min-confidence 80 "$@"; fi' --
+        language: system
+        files: \.pyi?$
+      - id: pip-audit
+        name: pip audit
+        entry: >-
+          bash -lc 'if [ ! -f requirements.txt ] && [ ! -f pyproject.toml ];
+          then echo "no Python dependency manifest found, skipping pip-audit";
+          elif [ -n "${VIRTUAL_ENV:-}" ] && [ -x
+          "$VIRTUAL_ENV/bin/pip-audit" ]; then "$VIRTUAL_ENV/bin/pip-audit"
+          -r requirements.txt; elif [ -x ./.venv/bin/pip-audit ]; then
+          ./.venv/bin/pip-audit -r requirements.txt; elif [ -x
+          ./venv/bin/pip-audit ]; then ./venv/bin/pip-audit -r
+          requirements.txt; elif [ -f requirements.txt ]; then pip-audit -r
+          requirements.txt; elif [ -f pyproject.toml ]; then pip-audit; fi' --
+        language: system
+        pass_filenames: false
+# repo-guard:python:end
+
+# repo-guard:go:start
+  - repo: local
+    hooks:
+      - id: gofmt
+        name: gofmt
+        entry: bash -lc 'gofmt -w "$@"'
+        language: system
+        files: \.go$
+      - id: goimports
+        name: goimports
+        entry: bash -lc 'goimports -w "$@"'
+        language: system
+        files: \.go$
+      - id: go-vet
+        name: go vet
+        entry: go vet ./...
+        language: system
+        files: \.go$
+        pass_filenames: false
+      - id: go-test
+        name: go test
+        entry: go test ./...
+        language: system
+        files: \.(go|js|html|tmpl)$
+        pass_filenames: false
+      - id: golangci-lint
+        name: golangci-lint
+        entry: golangci-lint run --new-from-rev=HEAD
+        language: system
+        files: \.go$
+        pass_filenames: false
+      - id: govulncheck
+        name: govulncheck
+        entry: govulncheck ./...
+        language: system
+        files: \.go$
+        pass_filenames: false
+# repo-guard:go:end
+
+# repo-guard:bash:start
+  - repo: local
+    hooks:
+      - id: shfmt
+        name: shfmt
+        entry: shfmt -w -i 2 -ci
+        language: system
+        files: \.(sh|bash)$
+      - id: shellcheck
+        name: shellcheck
+        entry: shellcheck
+        language: system
+        files: \.(sh|bash)$
+      - id: bash-syntax
+        name: bash syntax
+        entry: bash -n
+        language: system
+        files: \.(sh|bash)$
+# repo-guard:bash:end
+
+# repo-guard:javascript:start
+  - repo: local
+    hooks:
+      - id: eslint
+        name: eslint
+        entry: >-
+          bash -lc 'has_cfg=0; for c in eslint.config.js eslint.config.mjs
+          eslint.config.cjs eslint.config.ts eslint.config.mts eslint.config.cts
+          .eslintrc .eslintrc.js .eslintrc.cjs .eslintrc.json .eslintrc.yaml
+          .eslintrc.yml; do [ -e "$c" ] && has_cfg=1 && break; done; if [
+          "$has_cfg" -eq 0 ] && [ -f package.json ] && grep -q
+          "\"eslintConfig\"" package.json; then has_cfg=1; fi; if [ "$has_cfg"
+          -eq 0 ]; then exit 0; fi; if [ -x ./node_modules/.bin/eslint ]; then
+          ./node_modules/.bin/eslint "$@"; else eslint "$@"; fi' --
+        language: system
+        files: \.(js|jsx|mjs|cjs)$
+      - id: prettier
+        name: prettier
+        entry: >-
+          bash -lc 'if [ -x ./node_modules/.bin/prettier ]; then
+          ./node_modules/.bin/prettier --write "$@"; else prettier --write
+          "$@"; fi' --
+        language: system
+        files: \.(js|jsx|mjs|cjs|json|md|yaml|yml)$
+        exclude: ^\.pre-commit-config\.yaml$
+# repo-guard:javascript:end
+
+# repo-guard:containers:start
+  - repo: local
+    hooks:
+      - id: trivy-fs
+        name: trivy filesystem scan
+        entry: >-
+          bash -lc 'trivy fs --severity HIGH,CRITICAL --exit-code 1 .'
+        language: system
+        pass_filenames: false
+      - id: trivy-config
+        name: trivy config scan
+        entry: >-
+          bash -lc 'trivy config --severity HIGH,CRITICAL --exit-code 1 .'
+        language: system
+        pass_filenames: false
+# repo-guard:containers:end
